@@ -1,0 +1,19 @@
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api")
+public class IgniteController {
+
+    @Autowired
+    private CacheService cacheService;
+
+    @GetMapping("/table-row-counts")
+    public Map<String, Long> getTableRowCounts() {
+        return cacheService.getTableRowCounts();
+    }
+}
