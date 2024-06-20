@@ -1,0 +1,49 @@
+import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.cache.query.QueryCursor;
+import org.springframework.stereotype.Service;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+@Service
+public class CacheService {
+
+    @Autowired
+    private IgniteClient igniteClient;
+
+    @Autowired
+    private CachingConfig cachingConfig;
+
+    public void configureIgniteClientCache() {
+        ClientCacheConfiguration ccfg = new ClientCacheConfiguration();
+        ccfg.setSqlSchema(cachingConfig.getSchemaName());
+        ccfg.setName(cachingConfig.getCacheName());
+
+        igniteClient.getOrCreateCache(ccfg).withKeepBinary();
+        log.info("Client cache started");
+    }
+
+    public Map<String, Long> getTableRowCounts() {
+        Map<String, Long> tableCounts = new HashMap<>();
+        String schema = cachingConfig.getSchemaName();
+        String cacheName = cachingConfig.getCacheName();
+
+        String sqlTables = String.format("SELECT table_name FROM information_schema.tables WHERE table_schema = '%s' AND table_type = 'TABLE'", schema);
+
+        try (QueryCursor<List<?>> cursorTables = igniteClient.cache(cacheName).query(new SqlFieldsQuery(sqlTables))) {
+            for (List<?> row : cursorTables) {
+                String tableName = (String) row.get(0);
+                String sqlCount = String.format("SELECT COUNT(*) FROM %s.%s", schema, tableName);
+
+                try (QueryCursor<List<?>> cursorCount = igniteClient.cache(cacheName).query(new SqlFieldsQuery(sqlCount))) {
+                    for (List<?> countRow : cursorCount) {
+                        tableCounts.put(tableName, ((Number) countRow.get(0)).longValue());
+                    }
+                }
+            }
+        }
+
+        return tableCounts;
+    }
+}
