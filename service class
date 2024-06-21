@@ -25,33 +25,32 @@ public class CacheService {
     }
 
    public Map<String, Long> getTableRowCounts() {
-        Map<String, Long> tableCounts = new HashMap<>();
-        String schema = cachingConfig.getSchemaName();
-        String cacheName = cachingConfig.getCacheName();
+    Map<String, Long> tableCounts = new HashMap<>();
+    String schema = cachingConfig.getSchemaName();
+    String cacheName = cachingConfig.getCacheName();
 
-        log.info("Querying tables in schema: {}", schema);
+    String sqlTables = String.format("SELECT table_name FROM information_schema.tables WHERE table_schema = '%s' AND table_type = 'TABLE'", schema);
 
-        String sqlTables = String.format("SELECT table_name FROM information_schema.tables WHERE table_schema = '%s' AND table_type = 'TABLE'", schema);
+    try (QueryCursor<List<?>> cursorTables = igniteClient.cache(cacheName).query(new SqlFieldsQuery(sqlTables))) {
+        for (List<?> row : cursorTables) {
+            String tableName = (String) row.get(0);
+            String sqlCount = String.format("SELECT COUNT(*) FROM %s.%s", schema, tableName);
 
-        try (QueryCursor<List<?>> cursorTables = igniteClient.cache(cacheName).query(new SqlFieldsQuery(sqlTables))) {
-            for (List<?> row : cursorTables) {
-                String tableName = (String) row.get(0);
-                log.info("Found table: {}", tableName);
-
-                String sqlCount = String.format("SELECT COUNT(*) FROM %s.%s", schema, tableName);
-
-                try (QueryCursor<List<?>> cursorCount = igniteClient.cache(cacheName).query(new SqlFieldsQuery(sqlCount))) {
-                    for (List<?> countRow : cursorCount) {
-                        Long count = ((Number) countRow.get(0)).longValue();
-                        log.info("Table: {}, Count: {}", tableName, count);
-                        tableCounts.put(tableName, count);
-                    }
+            try (QueryCursor<List<?>> cursorCount = igniteClient.cache(cacheName).query(new SqlFieldsQuery(sqlCount))) {
+                for (List<?> countRow : cursorCount) {
+                    long rowCount = ((Number) countRow.get(0)).longValue();
+                    tableCounts.put(tableName, rowCount);
+                    System.out.println("Table Name: " + tableName + ", Row Count: " + rowCount);
                 }
             }
-        } catch (Exception e) {
-            log.error("Error querying table counts", e);
         }
-
-        return tableCounts;
+    } catch (Exception e) {
+        System.err.println("Error fetching table row counts: " + e.getMessage());
+        e.printStackTrace();
+        // Handle exception as per your application's error handling strategy
     }
+
+    return tableCounts;
+}
+
 }
