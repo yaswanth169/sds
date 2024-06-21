@@ -69,5 +69,23 @@ public List<String> getAllTableNames() {
 
     return tableNames;
 }
+//trying to get all data from cache
+public List<String> getCacheData(String cacheName) {
+    List<String> cacheData = new ArrayList<>();
+    String sqlQuery = "SELECT * FROM " + cacheName;
+    
+    try (QueryCursor<List<?>> cursor = igniteClient.query(new SqlFieldsQuery(sqlQuery))) {
+        for (List<?> row : cursor) {
+            String rowData = row.toString(); // Customize based on your data structure
+            cacheData.add(rowData);
+        }
+    } catch (Exception e) {
+        log.error("Failed to fetch data from cache: " + e.getMessage());
+    }
+    
+    return cacheData;
+}
+
+
 
 }
