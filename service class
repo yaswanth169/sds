@@ -88,4 +88,17 @@ public List<String> getCacheData(String cacheName) {
 
 
 
+ public static void printAllCacheData(IgniteCache<String, String> cache) {
+        // Query to get all key-value pairs from the cache
+        SqlFieldsQuery query = new SqlFieldsQuery("SELECT _key, _val FROM String WHERE cache_name = 'address'");
+
+        try (QueryCursor<List<?>> cursor = cache.query(query)) {
+            for (List<?> row : cursor) {
+                String key = (String) row.get(0);
+                String value = (String) row.get(1);
+                System.out.println("Key: " + key + ", Value: " + value);
+            }
+        }
+    }
+
 }
