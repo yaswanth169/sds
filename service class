@@ -53,4 +53,21 @@ public class CacheService {
     return tableCounts;
 }
 
+//table names finding 
+public List<String> getAllTableNames() {
+    List<String> tableNames = new ArrayList<>();
+    String schema = cachingConfig.getSchemaName();
+
+    String sqlTables = String.format("SELECT table_name FROM information_schema.tables WHERE table_schema = '%s' AND table_type = 'TABLE'", schema);
+
+    try (QueryCursor<List<?>> cursorTables = igniteClient.query(new SqlFieldsQuery(sqlTables))) {
+        for (List<?> row : cursorTables) {
+            String tableName = (String) row.get(0);
+            tableNames.add(tableName);
+        }
+    }
+
+    return tableNames;
+}
+
 }
