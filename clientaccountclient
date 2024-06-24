@@ -108,9 +108,50 @@ public class ClientAccountController {
 
 
 
+public void updateCacheCounts() {
+        for (String cacheName : ignite.cacheNames()) {
+            updateCacheCount(cacheName);
+        }
+    }
 
 
 
+
+
+import java.io.*;
+import java.util.LinkedList;
+import java.util.List;
+
+public class FileHandler {
+    private static final int MAX_COUNT = 5;
+
+    private static String getFilePath(String cacheName) {
+        return cacheName + "_counts.txt";
+    }
+
+    public static List<Integer> readCounts(String cacheName) {
+        List<Integer> counts = new LinkedList<>();
+        try (BufferedReader reader = new BufferedReader(new FileReader(getFilePath(cacheName)))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                counts.add(Integer.parseInt(line));
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return counts;
+    }
+
+    public static void writeCounts(String cacheName, List<Integer> counts) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(getFilePath(cacheName)))) {
+            for (int count : counts) {
+                writer.write(count + System.lineSeparator());
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
 
 
 
