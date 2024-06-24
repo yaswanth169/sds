@@ -249,7 +249,7 @@ http://localhost:8080/api/table-counts?cacheName=SDS
         return igniteService.getTableCounts(schemaName);
     }
 
-
+private static final Logger logger = LoggerFactory.getLogger(IgniteService.class);
 
 
 
