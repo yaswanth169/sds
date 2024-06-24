@@ -215,6 +215,42 @@ http://localhost:8080/api/table-counts?cacheName=SDS
 
 
 
+//connect to only single db
+
+ public Map<String, Integer> getTableCounts(String schemaName) {
+        Map<String, Integer> tableCounts = new HashMap<>();
+        try {
+            // Query to get table names in the specified schema
+            String sql = "SELECT table_name FROM information_schema.tables WHERE table_schema = ?";
+            SqlFieldsQuery query = new SqlFieldsQuery(sql).setArgs(schemaName);
+            IgniteCache<?, ?> cache = ignite.cache("SQL_PUBLIC_TABLES");
+            List<List<?>> tables = cache.query(query).getAll();
+
+            for (List<?> table : tables) {
+                String tableName = (String) table.get(0);
+                // Query to get the count of records in the table
+                sql = "SELECT COUNT(*) FROM " + schemaName + "." + tableName;
+                query = new SqlFieldsQuery(sql);
+                List<List<?>> countResult = cache.query(query).getAll();
+                Integer count = ((Long) countResult.get(0).get(0)).intValue();
+                tableCounts.put(tableName, count);
+            }
+        } catch (IgniteException e) {
+            e.printStackTrace();
+        }
+        return tableCounts;
+    }
+
+
+
+// their controller
+ @GetMapping("/table-counts/{schemaName}")
+    public Map<String, Integer> getTableCounts(@PathVariable String schemaName) {
+        return igniteService.getTableCounts(schemaName);
+    }
+
+
+
 
 
 
