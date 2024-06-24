@@ -1,0 +1,116 @@
+import java.io.*;
+import java.util.LinkedList;
+import java.util.List;
+
+public class FileHandler {
+    private static final String FILE_PATH = "clientaccount_counts.txt";
+    private static final int MAX_COUNT = 5;
+
+    public static List<Integer> readCounts() {
+        List<Integer> counts = new LinkedList<>();
+        try (BufferedReader reader = new BufferedReader(new FileReader(FILE_PATH))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                counts.add(Integer.parseInt(line));
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return counts;
+    }
+
+    public static void writeCounts(List<Integer> counts) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(FILE_PATH))) {
+            for (int count : counts) {
+                writer.write(count + System.lineSeparator());
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
+
+
+
+
+
+
+import org.apache.ignite.Ignite;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+@Service
+public class ClientAccountService {
+    @Autowired
+    private Ignite ignite;
+
+    public void updateClientAccountCount() {
+        // Get the current count from Ignite cache
+        int currentCount = ignite.cache("clientaccount").size();
+
+        // Read the last 5 counts from the file
+        List<Integer> counts = FileHandler.readCounts();
+
+        // Calculate the average of the last 5 counts
+        double average = counts.stream().mapToInt(Integer::intValue).average().orElse(0.0);
+
+        // Compare the current count with the average
+        if (currentCount > average) {
+            // Just add the current count
+            addCount(counts, currentCount);
+        } else {
+            double differencePercentage = ((average - currentCount) / average) * 100;
+            if (differencePercentage > 10) {
+                // Perform specific action if needed
+                // TODO: Implement specific action
+            }
+            addCount(counts, currentCount);
+        }
+
+        // Write the updated counts back to the file
+        FileHandler.writeCounts(counts);
+    }
+
+    private void addCount(List<Integer> counts, int currentCount) {
+        if (counts.size() == 5) {
+            counts.remove(0);  // Remove the oldest count
+        }
+        counts.add(currentCount);  // Add the new count
+    }
+}
+
+
+
+
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api")
+public class ClientAccountController {
+    @Autowired
+    private ClientAccountService clientAccountService;
+
+    @GetMapping("/update-clientaccount-count")
+    public String updateClientAccountCount() {
+        clientAccountService.updateClientAccountCount();
+        return "Client account count updated successfully!";
+    }
+}
+
+
+
+
+
+
+
+
+
+
