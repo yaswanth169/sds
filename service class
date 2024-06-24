@@ -102,3 +102,52 @@ public List<String> getCacheData(String cacheName) {
     }
 
 }
+
+
+
+
+
+import org.apache.ignite.Ignite;
+import org.apache.ignite.cache.CachePeekMode;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.HashMap;
+import java.util.Map;
+
+@Service
+public class IgniteService {
+    @Autowired
+    private Ignite ignite;
+
+    public Map<String, Integer> getTableCounts() {
+        Map<String, Integer> tableCounts = new HashMap<>();
+        ignite.cacheNames().forEach(cacheName -> {
+            int count = ignite.cache(cacheName).size(CachePeekMode.PRIMARY);
+            tableCounts.put(cacheName, count);
+        });
+        return tableCounts;
+    }
+}
+
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api")
+public class IgniteController {
+    @Autowired
+    private IgniteService igniteService;
+
+    @GetMapping("/table-counts")
+    public Map<String, Integer> getTableCounts() {
+        return igniteService.getTableCounts();
+    }
+}
+
+
