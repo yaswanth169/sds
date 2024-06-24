@@ -172,5 +172,50 @@ public Map<String, Integer> getTableCounts(String cacheName) {
 
 http://localhost:8080/api/table-counts?cacheName=SDS
 
+//ignite cache table counts
+
+ public Map<String, Integer> getTableCounts(String cacheName) {
+        Map<String, Integer> tableCounts = new HashMap<>();
+        try {
+            if (ignite.cacheNames().contains(cacheName)) {
+                IgniteCache<Object, Object> cache = ignite.cache(cacheName);
+                // Assuming cache entries are the "tables"
+                cache.forEach(entry -> {
+                    String tableName = entry.getKey().toString(); // Assuming key is the table name
+                    int count = cache.size(CachePeekMode.PRIMARY);
+                    tableCounts.put(tableName, count);
+                });
+            } else {
+                logger.error("Cache with name {} not found", cacheName);
+            }
+        } catch (Exception e) {
+            logger.error("Error retrieving cache counts", e);
+        }
+        return tableCounts;
+    }
+
+
+ @GetMapping("/table-counts/{cacheName}")
+    public ResponseEntity<Map<String, Integer>> getTableCounts(@PathVariable String cacheName) {
+        if (cacheName == null || cacheName.isEmpty()) {
+            logger.error("Cache name parameter is missing");
+            return ResponseEntity.badRequest().body(Collections.emptyMap());
+        }
+        try {
+            Map<String, Integer> tableCounts = igniteService.getTableCounts(cacheName);
+            if (tableCounts.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            return ResponseEntity.ok(tableCounts);
+        } catch (Exception e) {
+            logger.error("Error getting table counts for cache {}", cacheName, e);
+            return ResponseEntity.status(500).body(Collections.emptyMap());
+        }
+    }
+
+
+
+
+
 
 
