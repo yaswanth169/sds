@@ -1,0 +1,51 @@
+import org.apache.ignite.Ignite;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+@Service
+public class CacheService {
+    @Autowired
+    private Ignite ignite;
+
+    public void updateCacheCounts() {
+        for (String cacheName : ignite.cacheNames()) {
+            updateCacheCount(cacheName);
+        }
+    }
+
+    private void updateCacheCount(String cacheName) {
+        // Get the current count from Ignite cache
+        int currentCount = ignite.cache(cacheName).size();
+
+        // Read the last 5 counts from the file
+        List<Integer> counts = FileHandler.readCounts(cacheName);
+
+        // Calculate the average of the last 5 counts
+        double average = counts.stream().mapToInt(Integer::intValue).average().orElse(0.0);
+
+        // Compare the current count with the average
+        if (currentCount > average) {
+            // Just add the current count
+            addCount(counts, currentCount);
+        } else {
+            double differencePercentage = ((average - currentCount) / average) * 100;
+            if (differencePercentage > 10) {
+                // Perform specific action if needed
+                // TODO: Implement specific action
+            }
+            addCount(counts, currentCount);
+        }
+
+        // Write the updated counts back to the file
+        FileHandler.writeCounts(cacheName, counts);
+    }
+
+    private void addCount(List<Integer> counts, int currentCount) {
+        if (counts.size() == 5) {
+            counts.remove(0);  // Remove the oldest count
+        }
+        counts.add(currentCount);  // Add the new count
+    }
+}
