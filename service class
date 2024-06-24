@@ -169,3 +169,8 @@ public Map<String, Integer> getTableCounts(String cacheName) {
     }
 }
 
+
+http://localhost:8080/api/table-counts?cacheName=SDS
+
+
+
