@@ -128,6 +128,13 @@ public class IgniteService {
         });
         return tableCounts;
     }
+
+       System.out.println("Table Name\tCount");
+        System.out.println("----------------------------");
+        tableCounts.forEach((tableName, count) -> {
+            System.out.printf("%s\t%d%n", tableName, count);
+        });
+
 }
 
 
