@@ -1,0 +1,260 @@
+<dependencies>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-thymeleaf</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>javax.mail</groupId>
+        <artifactId>mail</artifactId>
+        <version>1.4.7</version>
+    </dependency>
+</dependencies>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+public class FileHandler {
+    private static final String FILE_PATH = "cache_counts.json";
+    private static final ObjectMapper objectMapper = new ObjectMapper();
+
+    public static Map<String, List<Integer>> readCounts() {
+        Map<String, List<Integer>> counts = new HashMap<>();
+        try {
+            File file = new File(FILE_PATH);
+            if (file.exists()) {
+                counts = objectMapper.readValue(file, new TypeReference<Map<String, List<Integer>>>() {});
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return counts;
+    }
+
+    public static void writeCounts(Map<String, List<Integer>> counts) {
+        try {
+            objectMapper.writeValue(new File(FILE_PATH), counts);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+@Service
+public class CacheService {
+    @Autowired
+    private Ignite ignite;
+
+    public Map<String, Boolean> updateCacheCounts() {
+        Map<String, List<Integer>> countsMap = FileHandler.readCounts();
+        Map<String, Boolean> deviationMap = new HashMap<>();
+
+        for (String cacheName : ignite.cacheNames()) {
+            boolean deviationOccurred = updateCacheCount(countsMap, cacheName);
+            deviationMap.put(cacheName, deviationOccurred);
+        }
+
+        FileHandler.writeCounts(countsMap);
+        return deviationMap;
+    }
+
+    private boolean updateCacheCount(Map<String, List<Integer>> countsMap, String cacheName) {
+        int currentCount = ignite.cache(cacheName).size();
+        List<Integer> counts = countsMap.getOrDefault(cacheName, new LinkedList<>());
+
+        double average = counts.stream().mapToInt(Integer::intValue).average().orElse(-1);
+        boolean deviationOccurred = false;
+
+        if (currentCount > average) {
+            addCount(counts, currentCount);
+        } else {
+            double differencePercentage = ((average - currentCount) / average) * 100;
+            if (differencePercentage > 10) {
+                deviationOccurred = true;
+                sendEmail(cacheName, counts, currentCount);
+            }
+            addCount(counts, currentCount);
+        }
+
+        countsMap.put(cacheName, counts);
+        return deviationOccurred;
+    }
+
+    private void addCount(List<Integer> counts, int currentCount) {
+        if (counts.size() == 5) {
+            counts.remove(0);
+        }
+        counts.add(currentCount);
+    }
+
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+@Controller
+public class CacheController {
+    @Autowired
+    private CacheService cacheService;
+
+    @GetMapping("/cache-counts")
+    public String getCacheCounts(Model model) {
+        Map<String, Boolean> deviationMap = cacheService.updateCacheCounts();
+        Map<String, Integer> cacheCounts = getCacheCountsFromIgnite();
+
+        List<CacheInfo> caches = new ArrayList<>();
+        for (Map.Entry<String, Integer> entry : cacheCounts.entrySet()) {
+            String cacheName = entry.getKey();
+            int count = entry.getValue();
+            boolean deviation = deviationMap.getOrDefault(cacheName, false);
+            caches.add(new CacheInfo(cacheName, count, deviation));
+        }
+
+        model.addAttribute("caches", caches);
+        return "cacheCounts";
+    }
+
+    private Map<String, Integer> getCacheCountsFromIgnite() {
+        Map<String, Integer> counts = new HashMap<>();
+        for (String cacheName : ignite.cacheNames()) {
+            counts.put(cacheName, ignite.cache(cacheName).size());
+        }
+        return counts;
+    }
+
+    public static class CacheInfo {
+        private String name;
+        private int count;
+        private boolean deviation;
+
+        public CacheInfo(String name, int count, boolean deviation) {
+            this.name = name;
+            this.count = count;
+            this.deviation = deviation;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public int getCount() {
+            return count;
+        }
+
+        public boolean isDeviation() {
+            return deviation;
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Cache Counts</title>
+</head>
+<body>
+<h1>Cache Counts</h1>
+<table border="1">
+    <thead>
+    <tr>
+        <th>Entity</th>
+        <th>Count in Cache</th>
+        <th>Deviation</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="cache : ${caches}">
+        <td th:text="${cache.name}"></td>
+        <td th:text="${cache.count}"></td>
+        <td th:text="${cache.deviation ? 'true' : 'false'}"></td>
+    </tr>
+    </tbody>
+</table>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
