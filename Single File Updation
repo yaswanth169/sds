@@ -1,0 +1,105 @@
+
+
+
+public class FileHandler {
+    private static final String FILE_PATH = "cache_counts.json";
+    private static final int MAX_COUNT = 5;
+    private static ObjectMapper objectMapper = new ObjectMapper();
+
+    public static Map<String, List<Integer>> readCounts() {
+        Map<String, List<Integer>> counts = new HashMap<>();
+        try {
+            File file = new File(FILE_PATH);
+            if (file.exists()) {
+                counts = objectMapper.readValue(file, new TypeReference<Map<String, List<Integer>>>() {});
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return counts;
+    }
+
+    public static void writeCounts(Map<String, List<Integer>> counts) {
+        try {
+            objectMapper.writeValue(new File(FILE_PATH), counts);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
+
+
+
+
+
+@Service
+public class CacheService {
+    @Autowired
+    private Ignite ignite;
+
+    public void updateCacheCounts() {
+        Map<String, List<Integer>> countsMap = FileHandler.readCounts();
+
+        for (String cacheName : ignite.cacheNames()) {
+            updateCacheCount(countsMap, cacheName);
+        }
+
+        FileHandler.writeCounts(countsMap);
+    }
+
+    private void updateCacheCount(Map<String, List<Integer>> countsMap, String cacheName) {
+        // Get the current count from Ignite cache
+        int currentCount = ignite.cache(cacheName).size();
+
+        // Get or create the list of counts for this cache
+        List<Integer> counts = countsMap.getOrDefault(cacheName, new LinkedList<>());
+
+        // Calculate the average of the last 5 counts
+        double average = counts.stream().mapToInt(Integer::intValue).average().orElse(0.0);
+
+        // Compare the current count with the average
+        if (currentCount > average) {
+            // Just add the current count
+            addCount(counts, currentCount);
+        } else {
+            double differencePercentage = ((average - currentCount) / average) * 100;
+            if (differencePercentage > 10) {
+                // Perform specific action if needed
+                // TODO: Implement specific action
+            }
+            addCount(counts, currentCount);
+        }
+
+        // Update the counts in the map
+        countsMap.put(cacheName, counts);
+    }
+
+    private void addCount(List<Integer> counts, int currentCount) {
+        if (counts.size() == 5) {
+            counts.remove(0);  // Remove the oldest count
+        }
+        counts.add(currentCount);  // Add the new count
+    }
+}
+
+
+
+
+@RestController
+@RequestMapping("/api")
+public class CacheController {
+    @Autowired
+    private CacheService cacheService;
+
+    @GetMapping("/update-cache-counts")
+    public String updateCacheCounts() {
+        cacheService.updateCacheCounts();
+        return "Cache counts updated successfully for all caches!";
+    }
+}
+
+
+
+
