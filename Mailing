@@ -1,0 +1,82 @@
+
+
+@Data
+public class Email {
+
+    private String to;
+    private String subject;
+    private String body;
+
+}
+
+
+spring.application.name=javaMailingDemo
+
+# application.properties
+spring.mail.host=smtp.gmail.com
+spring.mail.port=587
+spring.mail.username=
+spring.mail.password=
+spring.mail.properties.mail.smtp.auth=true
+spring.mail.properties.mail.smtp.starttls.enable=true
+spring.mail.properties.mail.smtp.starttls.required=true
+spring.mail.properties.mail.smtp.connectiontimeout=5000
+spring.mail.properties.mail.smtp.timeout=5000
+spring.mail.properties.mail.smtp.writetimeout=5000
+
+
+
+
+
+
+@RestController
+public class EmailController {
+    @Autowired
+    private EmailSenderService emailSenderService;
+
+    @PostMapping("/send-email")
+    public ResponseEntity sendEmail(@RequestBody Email email){
+        emailSenderService.sendEmail(email.getTo(),email.getSubject(), email.getBody());
+        return ResponseEntity.ok("Success");
+    }
+}
+
+
+
+@Service
+
+public class EmailSenderImpl  implements  EmailSenderService{
+
+
+    @Autowired
+    private final JavaMailSender javaMailSender;
+
+    public EmailSenderImpl(JavaMailSender javaMailSender) {
+        this.javaMailSender = javaMailSender;
+    }
+
+    @Override
+    public void sendEmail(String to, String subject, String content) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom("bhavagna8@gmail.com");
+        message.setTo(to);
+        message.setSubject(subject);
+        message.setText(content);
+        javaMailSender.send(message);
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
