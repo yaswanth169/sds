@@ -160,3 +160,13 @@ public class CacheController {
         <version>1.4.7</version>
     </dependency>
 
+
+
+
+
+
+package com.bhatevara.backend.service;
+
+public interface EmailSenderService {
+    void sendEmail(String to, String subject, String content);
+}
