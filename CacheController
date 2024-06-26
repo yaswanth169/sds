@@ -1,0 +1,180 @@
+@Controller
+public class CacheController {
+    @Autowired
+    private Ignite ignite;
+
+    @GetMapping("/schemas")
+    @ResponseBody
+    public Set<String> getSchemas() {
+        if (!isClusterActive()) {
+            throw new IllegalStateException("Cluster is inactive");
+        }
+        return ignite.cacheNames();
+    }
+
+    @GetMapping("/tables")
+    @ResponseBody
+    public Set<String> getTables(@RequestParam String schema) {
+        if (!isClusterActive()) {
+            throw new IllegalStateException("Cluster is inactive");
+        }
+        // Assuming the schema is a cache name and contains tables
+        // Adapt this method if your schema and table retrieval logic differs
+        return ignite.cache(schema).query(new SqlFieldsQuery("SHOW TABLES")).getAll();
+    }
+
+    @GetMapping("/cache-counts")
+    public String getCacheCounts(@RequestParam(required = false) String schema, Model model) {
+        if (!isClusterActive()) {
+            model.addAttribute("clusterInactive", true);
+            return "cacheCounts";
+        }
+
+        if (schema == null || schema.isEmpty()) {
+            schema = "SDS"; // Default schema
+        }
+        Map<String, Integer> cacheCounts = getCacheCountsFromIgnite(schema);
+
+        List<CacheInfo> caches = new ArrayList<>();
+        for (Map.Entry<String, Integer> entry : cacheCounts.entrySet()) {
+            String cacheName = entry.getKey();
+            int count = entry.getValue();
+            caches.add(new CacheInfo(cacheName, count, false)); // Deviation logic can be added later
+        }
+
+        model.addAttribute("caches", caches);
+        model.addAttribute("selectedSchema", schema);
+        model.addAttribute("clusterInactive", false);
+        return "cacheCounts";
+    }
+
+    private boolean isClusterActive() {
+        IgniteCluster cluster = ignite.cluster();
+        return cluster.state() == ClusterState.ACTIVE;
+    }
+
+    private Map<String, Integer> getCacheCountsFromIgnite(String schema) {
+        Map<String, Integer> counts = new HashMap<>();
+        for (String cacheName : ignite.cacheNames()) {
+            if (cacheName.startsWith(schema)) {
+                counts.put(cacheName, ignite.cache(cacheName).size());
+            }
+        }
+        return counts;
+    }
+
+    public static class CacheInfo {
+        private String name;
+        private int count;
+        private boolean deviation;
+
+        public CacheInfo(String name, int count, boolean deviation) {
+            this.name = name;
+            this.count = count;
+            this.deviation = deviation;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public int getCount() {
+            return count;
+        }
+
+        public boolean isDeviation() {
+            return deviation;
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+html file 
+
+
+
+
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Cache Counts</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+<h1>Cache Counts</h1>
+
+<!-- Cluster Inactive Message -->
+<div th:if="${clusterInactive}" style="color: red;">
+    Cluster is inactive, wait for some time. It's restarting in a while...
+</div>
+
+<!-- Schema Dropdown -->
+<div th:if="!${clusterInactive}">
+    <label for="schemaSelect">Select Schema:</label>
+    <select id="schemaSelect">
+        <!-- Schemas will be populated here -->
+    </select>
+</div>
+
+<!-- Cache Counts Table -->
+<table border="1" th:if="!${clusterInactive}">
+    <thead>
+    <tr>
+        <th>Entity</th>
+        <th>Count in Cache</th>
+        <th>Deviation</th>
+    </tr>
+    </thead>
+    <tbody id="cacheTableBody">
+    <!-- Table rows will be populated here based on selected schema -->
+    </tbody>
+</table>
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        // Fetch schemas and populate dropdown
+        $.get("/schemas", function (schemas) {
+            var schemaSelect = $("#schemaSelect");
+            schemaSelect.empty();
+            schemas.forEach(function (schema) {
+                schemaSelect.append(new Option(schema, schema));
+            });
+
+            // Load tables for the first schema initially
+            if (schemas.length > 0) {
+                loadTables(schemas[0]);
+            }
+        });
+
+        // Handle schema selection change
+        $("#schemaSelect").change(function () {
+            var selectedSchema = $(this).val();
+            loadTables(selectedSchema);
+        });
+
+        function loadTables(schema) {
+            $.get("/cache-counts", { schema: schema }, function (data) {
+                var tableBody = $("#cacheTableBody");
+                tableBody.empty();
+                data.forEach(function (cache) {
+                    var row = $("<tr></tr>");
+                    row.append($("<td></td>").text(cache.name));
+                    row.append($("<td></td>").text(cache.count));
+                    row.append($("<td></td>").text(cache.deviation));
+                    tableBody.append(row);
+                });
+            });
+        }
+    });
+</script>
+</body>
+</html>
+
