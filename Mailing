@@ -72,7 +72,15 @@ public class EmailSenderImpl  implements  EmailSenderService{
 
 
 
+private void sendDeviationEmail(String cacheName, List<Integer> counts, int currentCount) {
+        String to = "user@example.com"; // Replace with the respective user's email
+        String subject = "Cache Deviation Alert for " + cacheName;
+        String body = "Deviation occurred for cache: " + cacheName + "\n" +
+                      "Last 5 counts: " + counts + "\n" +
+                      "Current count: " + currentCount;
 
+        emailSenderService.sendEmail(to, subject, body);
+    }
 
 
 
