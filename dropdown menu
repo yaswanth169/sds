@@ -1,144 +1,96 @@
+@Controller
+public class CacheController {
+    @Autowired
+    private CacheService cacheService;
 
-tables.html
+    @GetMapping("/cache-counts")
+    public String getCacheCounts(Model model) {
+        // Retrieve general cache counts and deviations
+        Map<String, Boolean> deviationMap = cacheService.updateCacheCounts();
+        Map<String, Integer> cacheCounts = getCacheCountsFromIgnite();
+
+        // Prepare list of CacheInfo objects
+        List<CacheInfo> caches = new ArrayList<>();
+        for (Map.Entry<String, Integer> entry : cacheCounts.entrySet()) {
+            String cacheName = entry.getKey();
+            int count = entry.getValue();
+            boolean deviation = deviationMap.getOrDefault(cacheName, false);
+            caches.add(new CacheInfo(cacheName, count, deviation));
+        }
+
+        model.addAttribute("caches", caches);
+        return "cacheCounts";
+    }
+
+    @GetMapping("/schema/{schemaName}")
+    public String getSchemaEntities(@PathVariable String schemaName, Model model) {
+        // Example logic to fetch entity names for a specific schema
+        List<String> entityNames = fetchEntityNamesForSchema(schemaName);
+
+        model.addAttribute("schemaName", schemaName);
+        model.addAttribute("entityNames", entityNames);
+        return "schemaEntities";
+    }
+
+    private Map<String, Integer> getCacheCountsFromIgnite() {
+        // Method to fetch cache counts from Ignite
+        // Implementation remains the same
+    }
+
+    private List<String> fetchEntityNamesForSchema(String schemaName) {
+        // Example implementation to fetch entity names for a schema
+        // Replace with your logic to retrieve entity names for the given schema
+        List<String> entityNames = new ArrayList<>();
+        switch (schemaName) {
+            case "sds":
+                entityNames.add("clientaccount");
+                entityNames.add("clientcategory");
+                // Add other entity names specific to 'sds' schema
+                break;
+            case "esm":
+                entityNames.add("product");
+                entityNames.add("location");
+                // Add other entity names specific to 'esm' schema
+                break;
+            // Add cases for other schemas ('public', 'tracrds', 'sys', etc.)
+            default:
+                // Handle default case or unknown schema
+                break;
+        }
+        return entityNames;
+    }
+
+    public static class CacheInfo {
+        // CacheInfo class remains the same
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title>Schema Tables</title>
+    <title>Schema Entities</title>
 </head>
 <body>
-<h1>Schema Tables - <span th:text="${schemaName}"></span></h1>
-
-<form action="#" th:action="@{/tables}" method="get">
-    <label for="schema">Select Schema:</label>
-    <select id="schema" name="schema">
-        <option value="SDS">SDS</option>
-        <option value="ESM">ESM</option>
-        <option value="PUBLIC">PUBLIC</option>
-    </select>
-    <button type="submit">Submit</button>
-</form>
-
-<table border="1" th:if="${tablesData}">
-    <thead>
-    <tr>
-        <th>Table</th>
-        <th>Count in Cache</th>
-        <th>Deviation</th>
-    </tr>
-    </thead>
-    <tbody>
-    <tr th:each="entry : ${tablesData}">
-        <td th:text="${entry.key}"></td>
-        <td th:text="${entry.value.count}"></td>
-        <td th:text="${entry.value.deviation ? 'true' : 'false'}"></td>
-    </tr>
-    </tbody>
-</table>
-
+<h1 th:text="'Entities in ' + ${schemaName}"></h1>
+<ul>
+    <li th:each="entity : ${entityNames}" th:text="${entity}"></li>
+</ul>
+<a href="/cache-counts">Back to Cache Counts</a>
 </body>
 </html>
-
-
-
-
-
-@Controller
-public class CacheController {
-
-    @Autowired
-    private CacheService cacheService;
-
-    @GetMapping("/tables")
-    public String getTables(@RequestParam("schema") String schemaName, Model model) {
-        Map<String, CacheInfo> tablesData = cacheService.getTablesData(schemaName);
-        model.addAttribute("schemaName", schemaName);
-        model.addAttribute("tablesData", tablesData);
-        return "tables"; // Assuming you have a Thymeleaf template named "tables.html"
-    }
-
-    public static class CacheInfo {
-        private String name;
-        private int count;
-        private boolean deviation;
-
-        public CacheInfo(String name, int count, boolean deviation) {
-            this.name = name;
-            this.count = count;
-            this.deviation = deviation;
-        }
-
-        // Getters and setters
-    }
-}
-
-
-
-
-
-
-
-@Service
-public class CacheService {
-
-    @Autowired
-    private Ignite ignite;
-
-    public Map<String, CacheController.CacheInfo> getTablesData(String schemaName) {
-        Map<String, CacheController.CacheInfo> tablesData = new LinkedHashMap<>();
-        
-        Schema schema = Schema.valueOf(schemaName.toUpperCase());
-
-        for (String tableName : schema.getTables()) {
-            int count = getCacheCount(tableName);
-            boolean deviation = checkDeviation(tableName, count); // Implement this method to check deviation
-            tablesData.put(tableName, new CacheController.CacheInfo(tableName, count, deviation));
-        }
-
-        return tablesData;
-    }
-
-    private int getCacheCount(String tableName) {
-        // Implement logic to get count from Ignite cache for the given tableName
-        // Example: return ignite.cache(tableName).size();
-        return 0; // Placeholder
-    }
-
-    private boolean checkDeviation(String tableName, int count) {
-        // Implement logic to check deviation (e.g., compare with previous counts)
-        return false; // Placeholder
-    }
-}
-
-
-
-
-
-
-
-
-
-
-public enum Schema {
-    SDS("sds", Arrays.asList("clientaccount", "clientcategory")),
-    ESM("esm", Arrays.asList("product", "location")),
-    PUBLIC("public", Arrays.asList("address", "employee"));
-
-    private final String name;
-    private final List<String> tables;
-
-    Schema(String name, List<String> tables) {
-        this.name = name;
-        this.tables = tables;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public List<String> getTables() {
-        return tables;
-    }
-}
-
-
