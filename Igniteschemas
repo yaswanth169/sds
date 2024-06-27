@@ -1,0 +1,15 @@
+ public List<String> getSchemaNames() {
+        IgniteCache<?, ?> cache = ignite.cache("default");
+        String sql = "SELECT SCHEMA_NAME FROM SYS.SCHEMAS";
+        SqlFieldsQuery query = new SqlFieldsQuery(sql);
+        List<List<?>> result;
+
+        try (QueryCursor<List<?>> cursor = cache.query(query)) {
+            result = cursor.getAll();
+        }
+
+        return result.stream()
+                .map(row -> (String) row.get(0))
+                .distinct()
+                .toList();
+    }
