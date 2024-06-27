@@ -13,3 +13,15 @@
                 .distinct()
                 .toList();
     }
+
+
+
+try (QueryCursor<List<?>> cursor = cache.query(query)) {
+            result = cursor.getAll();
+            result.stream()
+                    .map(row -> (String) row.get(0))
+                    .distinct()
+                    .forEach(System.out::println);
+        } catch (IgniteException e) {
+            e.printStackTrace();
+        }
