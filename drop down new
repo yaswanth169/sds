@@ -1,0 +1,166 @@
+
+SchemaTableConfig : 
+------------------
+
+
+public class SchemaTableConfig {
+
+    private static final Map<String, List<String>> schemaTablesMap = new HashMap<>();
+
+    static {
+        schemaTablesMap.put("SDS", List.of("clientaccount", "clientcategory", "confirmationdetail", "confirmationmethod", "consolidatedgroup", "counterparty", "lei", "location", "product", "region"));
+        schemaTablesMap.put("ESM", List.of("esm_table1", "esm_table2")); // Add ESM table names here
+        schemaTablesMap.put("TRACRDS", List.of("tracrds_table1", "tracrds_table2")); // Add TRACRDS table names here
+        schemaTablesMap.put("PUBLIC", List.of("public_table1", "public_table2")); // Add PUBLIC table names here
+        schemaTablesMap.put("SYS", List.of("sys_table1", "sys_table2")); // Add SYS table names here
+    }
+
+    public static List<String> getTablesForSchema(String schema) {
+        return schemaTablesMap.getOrDefault(schema, List.of());
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+SchemaController :
+------------------
+
+@RestController
+public class SchemaController {
+
+    @GetMapping("/getTables")
+    public List<String> getTables(@RequestParam String schema) {
+        return SchemaTableConfig.getTablesForSchema(schema);
+    }
+}
+
+
+index.html :
+-----------
+
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Schema Table Counts</title>
+    <script>
+        function fetchTables() {
+            const schema = document.getElementById('schemaSelect').value;
+            if (schema) {
+                fetch(`/getTables?schema=${schema}`)
+                    .then(response => response.json())
+                    .then(tables => {
+                        const tableList = document.getElementById('tableList');
+                        tableList.innerHTML = '';
+                        tables.forEach(table => {
+                            fetch(`/getTableCount?table=${table}`)
+                                .then(response => response.json())
+                                .then(data => {
+                                    const row = document.createElement('tr');
+                                    row.innerHTML = `<td>${table}</td><td>${data.count}</td><td>false</td>`;
+                                    tableList.appendChild(row);
+                                });
+                        });
+                    });
+            }
+        }
+    </script>
+</head>
+<body>
+    <div>
+        <label for="schemaSelect">Select Schema:</label>
+        <select id="schemaSelect" onchange="fetchTables()">
+            <option value="">Select Schema</option>
+            <option value="SDS">SDS</option>
+            <option value="ESM">ESM</option>
+            <option value="TRACRDS">TRACRDS</option>
+            <option value="PUBLIC">PUBLIC</option>
+            <option value="SYS">SYS</option>
+        </select>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>Entity</th>
+                <th>Count in Cache</th>
+                <th>Deviation (true/false)</th>
+            </tr>
+        </thead>
+        <tbody id="tableList">
+            <!-- Table rows will be added here dynamically -->
+        </tbody>
+    </table>
+</body>
+</html>
+
+
+
+
+TableCountController :
+--------------------
+
+
+
+@RestController
+public class TableCountController {
+
+    @GetMapping("/getTableCount")
+    public TableCountResponse getTableCount(@RequestParam String table) {
+        int count = getEntityCount(table); // Implement this method based on your existing logic
+        return new TableCountResponse(count);
+    }
+
+    private int getEntityCount(String table) {
+        // Implement your logic to get the count for the table
+        return 0;
+    }
+
+    static class TableCountResponse {
+        private int count;
+
+        public TableCountResponse(int count) {
+            this.count = count;
+        }
+
+        public int getCount() {
+            return count;
+        }
+
+        public void setCount(int count) {
+            this.count = count;
+        }
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
