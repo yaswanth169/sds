@@ -1,0 +1,23 @@
+tables names printing in schema :
+
+
+
+public void printTableNames() {
+        try {
+            String sql = "SELECT table_name FROM information_schema.tables WHERE table_schema = ?";
+
+            SqlFieldsQuery query = new SqlFieldsQuery(sql);
+            query.setArgs(schemaName);
+
+            try (QueryCursor<List<?>> cursor = ignite.cache("default").query(query)) {
+                System.out.println("Tables in schema " + schemaName + ":");
+                for (List<?> row : cursor) {
+                    String tableName = (String) row.get(0);
+                    System.out.println("Table Name: " + tableName);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error occurred while fetching table names: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
