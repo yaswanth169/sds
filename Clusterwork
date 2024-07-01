@@ -1,0 +1,13 @@
+@GetMapping("/cluster/status")
+public ResponseEntity<String> getClusterStatus() {
+    try {
+        ClusterGroup clusterGroup = ignite.cluster().forServers();
+        int nodeCount = clusterGroup.nodes().size();
+        boolean isActive = ignite.active();
+
+        return ResponseEntity.ok("Cluster is " + (isActive ? "active" : "inactive") + " with " + nodeCount + " nodes.");
+    } catch (Exception e) {
+        e.printStackTrace();
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error checking cluster status: " + e.getMessage());
+    }
+}
