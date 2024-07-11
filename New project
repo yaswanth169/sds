@@ -1,0 +1,397 @@
+
+
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+
+@Entity
+public class Bodies {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    private String name;
+    // getters and setters
+}
+
+
+import javax.persistence.*;
+
+@Entity
+public class Codes {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "bodyId")
+    private Bodies body;
+
+    private String code;
+    private String name;
+    private String description;
+    private LocalDate published;
+    // getters and setters
+}
+
+
+
+
+import javax.persistence.*;
+
+@Entity
+public class Requirements {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String description;
+    private String section;
+    private String principle;
+
+    @ManyToOne
+    @JoinColumn(name = "codeId")
+    private Codes code;
+
+    private String interpretation;
+    // getters and setters
+}
+
+
+
+
+import javax.persistence.*;
+
+@Entity
+public class CodesToLegalEntities {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "codeId")
+    private Codes code;
+
+    private Integer brid;
+    // getters and setters
+}
+
+repos 
+
+
+
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface BodiesRepository extends JpaRepository<Bodies, Long> {
+}
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface CodesRepository extends JpaRepository<Codes, Long> {
+}
+
+
+
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface RequirementsRepository extends JpaRepository<Requirements, Long> {
+}
+
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface CodesToLegalEntitiesRepository extends JpaRepository<CodesToLegalEntities, Long> {
+}
+
+
+
+
+services 
+
+
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+@Service
+public class BodiesService {
+    @Autowired
+    private BodiesRepository bodiesRepository;
+
+    public List<Bodies> getAllBodies() {
+        return bodiesRepository.findAll();
+    }
+
+    public Bodies getBodyById(Long id) {
+        return bodiesRepository.findById(id).orElse(null);
+    }
+
+    public Bodies saveBody(Bodies body) {
+        return bodiesRepository.save(body);
+    }
+
+    public void deleteBody(Long id) {
+        bodiesRepository.deleteById(id);
+    }
+}
+
+
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+@Service
+public class CodesService {
+    @Autowired
+    private CodesRepository codesRepository;
+
+    public List<Codes> getAllCodes() {
+        return codesRepository.findAll();
+    }
+
+    public Codes getCodeById(Long id) {
+        return codesRepository.findById(id).orElse(null);
+    }
+
+    public Codes saveCode(Codes code) {
+        return codesRepository.save(code);
+    }
+
+    public void deleteCode(Long id) {
+        codesRepository.deleteById(id);
+    }
+}
+
+
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+@Service
+public class RequirementsService {
+    @Autowired
+    private RequirementsRepository requirementsRepository;
+
+    public List<Requirements> getAllRequirements() {
+        return requirementsRepository.findAll();
+    }
+
+    public Requirements getRequirementById(Long id) {
+        return requirementsRepository.findById(id).orElse(null);
+    }
+
+    public Requirements saveRequirement(Requirements requirement) {
+        return requirementsRepository.save(requirement);
+    }
+
+    public void deleteRequirement(Long id) {
+        requirementsRepository.deleteById(id);
+    }
+}
+
+
+
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+@Service
+public class CodesToLegalEntitiesService {
+    @Autowired
+    private CodesToLegalEntitiesRepository codesToLegalEntitiesRepository;
+
+    public List<CodesToLegalEntities> getAllCodesToLegalEntities() {
+        return codesToLegalEntitiesRepository.findAll();
+    }
+
+    public CodesToLegalEntities getCodesToLegalEntityById(Long id) {
+        return codesToLegalEntitiesRepository.findById(id).orElse(null);
+    }
+
+    public CodesToLegalEntities saveCodesToLegalEntity(CodesToLegalEntities codesToLegalEntity) {
+        return codesToLegalEntitiesRepository.save(codesToLegalEntity);
+    }
+
+    public void deleteCodesToLegalEntity(Long id) {
+        codesToLegalEntitiesRepository.deleteById(id);
+    }
+}
+
+
+
+controllers
+
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/bodies")
+public class BodiesController {
+    @Autowired
+    private BodiesService bodiesService;
+
+    @GetMapping
+    public List<Bodies> getAllBodies() {
+        return bodiesService.getAllBodies();
+    }
+
+    @GetMapping("/{id}")
+    public Bodies getBodyById(@PathVariable Long id) {
+        return bodiesService.getBodyById(id);
+    }
+
+    @PostMapping
+    public Bodies saveBody(@RequestBody Bodies body) {
+        return bodiesService.saveBody(body);
+    }
+
+    @DeleteMapping("/{id}")
+    public void deleteBody(@PathVariable Long id) {
+        bodiesService.deleteBody(id);
+    }
+}
+
+
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/codes")
+public class CodesController {
+    @Autowired
+    private CodesService codesService;
+
+    @GetMapping
+    public List<Codes> getAllCodes() {
+        return codesService.getAllCodes();
+    }
+
+    @GetMapping("/{id}")
+    public Codes getCodeById(@PathVariable Long id) {
+        return codesService.getCodeById(id);
+    }
+
+    @PostMapping
+    public Codes saveCode(@RequestBody Codes code) {
+        return codesService.saveCode(code);
+    }
+
+    @DeleteMapping("/{id}")
+    public void deleteCode(@PathVariable Long id) {
+        codesService.deleteCode(id);
+    }
+}
+
+
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/requirements")
+public class RequirementsController {
+    @Autowired
+    private RequirementsService requirementsService;
+
+    @GetMapping
+    public List<Requirements> getAllRequirements() {
+        return requirementsService.getAllRequirements();
+    }
+
+    @GetMapping("/{id}")
+    public Requirements getRequirementById(@PathVariable Long id) {
+        return requirementsService.getRequirementById(id);
+    }
+
+    @PostMapping
+    public Requirements saveRequirement(@RequestBody Requirements requirement) {
+        return requirementsService.saveRequirement(requirement);
+    }
+
+    @DeleteMapping("/{id}")
+    public void deleteRequirement(@PathVariable Long id) {
+        requirementsService.deleteRequirement(id);
+    }
+}
+
+
+
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/codesToLegalEntities")
+public class CodesToLegalEntitiesController {
+    @Autowired
+    private CodesToLegalEntitiesService codesToLegalEntitiesService;
+
+    @GetMapping
+    public List<CodesToLegalEntities> getAllCodesToLegalEntities() {
+        return codesToLegalEntitiesService.getAllCodesToLegalEntities();
+    }
+
+    @GetMapping("/{id}")
+    public CodesToLegalEntities getCodesToLegalEntityById(@PathVariable Long id) {
+        return codesToLegalEntitiesService.getCodesToLegalEntityById(id);
+    }
+
+    @PostMapping
+    public CodesToLegalEntities saveCodesToLegalEntity(@RequestBody CodesToLegalEntities codesToLegalEntity) {
+        return codesToLegalEntitiesService.saveCodesToLegalEntity(codesToLegalEntity);
+    }
+
+    @DeleteMapping("/{id}")
+    public void deleteCodesToLegalEntity(@PathVariable Long id) {
+        codesToLegalEntitiesService.deleteCodesToLegalEntity(id);
+    }
+}
+
+
+
+
+
+app.properties
+
+
+spring.datasource.url=jdbc:h2:mem:testdb
+spring.datasource.driverClassName=org.h2.Driver
+spring.datasource.username=sa
+spring.datasource.password=password
+spring.jpa.database-platform=org.hibernate.dialect.H2Dialect
+spring.h2.console.enabled=true
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
