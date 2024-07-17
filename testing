@@ -1,0 +1,46 @@
+ @Test
+    void testSavindustrycode() {
+        // Arrange
+        HttpHeaders headers = new HttpHeaders();
+        CodesDto codesDto = new CodesDto();
+        // Assume isValidCodeForSave is a method in CodesController
+        when(codesController.isValidCodeForSave(any(CodesDto.class))).thenReturn(true);
+        when(codesService.save(any(Codes.class), anyString())).thenReturn(null);
+        
+        Codes codes = new Codes();
+        codes.setId(1); // Assuming there's a setId method
+        when(codesDto.transformToPojo()).thenReturn(codes);
+        
+        Codes savedCode = new Codes();
+        when(codesService.findById(anyInt())).thenReturn(savedCode);
+        
+        CodesDto savedCodesDto = new CodesDto();
+        when(savedCode.getCodesDto()).thenReturn(savedCodesDto);
+        
+        // Act
+        ResponseEntity<CodesDto> response = codesController.savindustrycode(headers, codesDto);
+        
+        // Assert
+        verify(codesService).save(any(Codes.class), anyString());
+        verify(codesService).findById(anyInt());
+        
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        CodesDto body = response.getBody();
+        assertThat(body).isNotNull();
+    }
+
+    @Test
+    void testSavindustrycode_InvalidCode() {
+        // Arrange
+        HttpHeaders headers = new HttpHeaders();
+        CodesDto codesDto = new CodesDto();
+        // Assume isValidCodeForSave is a method in CodesController
+        when(codesController.isValidCodeForSave(any(CodesDto.class))).thenReturn(false);
+        
+        // Act & Assert
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+            codesController.savindustrycode(headers, codesDto);
+        });
+        
+        assertThat(exception.getMessage()).isEqualTo("Invalid attribute for save: 'id' field cannot be present on new code request");
+    }
