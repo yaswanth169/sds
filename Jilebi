@@ -1,0 +1,70 @@
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+public class FileHandlerTest {
+
+    @TempDir
+    Path tempDir;
+
+    private ObjectMapper objectMapper;
+    private File tempFile;
+    private static final String FILE_PATH = "C:\\sds\\src\\main\\resources\\cache_counts.json";
+    private static final int MAX_COUNT = 5;
+
+    @BeforeEach
+    public void setUp() throws IOException {
+        objectMapper = mock(ObjectMapper.class);
+        tempFile = new File(tempDir.toFile(), "cache_counts.json");
+        FileHandler.filePath = tempFile.getPath();
+        FileHandler.objectMapper = objectMapper;
+    }
+
+    @Test
+    public void testReadCounts_FileExists() throws IOException {
+        Map<String, List<Integer>> expectedCounts = new HashMap<>();
+        expectedCounts.put("key1", List.of(1, 2, 3));
+
+        when(objectMapper.readValue(any(File.class), any(TypeReference.class))).thenReturn(expectedCounts);
+
+        Map<String, List<Integer>> actualCounts = FileHandler.readCounts();
+
+        assertEquals(expectedCounts, actualCounts);
+        verify(objectMapper, times(1)).readValue(any(File.class), any(TypeReference.class));
+    }
+
+    @Test
+    public void testReadCounts_FileDoesNotExist() {
+        tempFile.delete();  // Ensure the file does not exist
+
+        Map<String, List<Integer>> actualCounts = FileHandler.readCounts();
+
+        assertTrue(actualCounts.isEmpty());
+        verify(objectMapper, never()).readValue(any(File.class), any(TypeReference.class));
+    }
+
+    @Test
+    public void testWriteCounts() throws IOException {
+        Map<String, List<Integer>> counts = new HashMap<>();
+        counts.put("key1", List.of(1, 2, 3));
+
+        doNothing().when(objectMapper).writeValue(any(File.class), eq(counts));
+
+        FileHandler.writeCounts(counts);
+
+        verify(objectMapper, times(1)).writeValue(any(File.class), eq(counts));
+    }
+}
